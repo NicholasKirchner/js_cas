@@ -6,7 +6,8 @@
 
   <link rel="stylesheet" type="text/css" href="styling.css">
   <script type="text/javascript" src="lib/underscore.js"></script>
-  <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js"></script>
+  <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=default"></script>
+  <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
 
   <script type="text/javascript" src="engine/token.js"></script>
   <script type="text/javascript" src="engine/operations.js"></script>
@@ -14,12 +15,14 @@
   <script type="text/javascript" src="engine/pattern.js"></script>
   <script type="text/javascript" src="engine/rules.js"></script>
 
+  <script type="text/javascript" src="view.js"></script>
+
 </head>
 
 <body>
   <div class="input_field">
     <form>
-      <input name="expression" type="text">
+      <input id="expression" type="text">
       <input id="simplify" type="submit" value="Simplify">
       <input id="preview" type="submit" value="Preview">
     </form>

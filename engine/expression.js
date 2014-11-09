@@ -117,7 +117,7 @@ Expression.rpnToArrayTree = function(rpn) {
 //output: a single array flattening things into a single sequence of steps.
 Expression.sanitizeSubSteps = function(arg_steps, parent_op, parent_args) {
     var steps = [];
-    var argument_leaves = _.clone(parent_args);
+    var argument_leaves = _.map(parent_args, function(arg) { return arg.clone() });
     var previous_expression = new Expression(null, "direct", parent_op, _.clone(argument_leaves));
     _.times(arg_steps.length, function(index) {
         var one_arg_steps = arg_steps[index];
@@ -126,7 +126,7 @@ Expression.sanitizeSubSteps = function(arg_steps, parent_op, parent_args) {
             this_old = previous_expression;
             this_new = new Expression(null, "direct", parent_op, _.clone(argument_leaves));
             this_method = one_step["method"];
-            steps.push({"old": this_old, "new": this_new, "method": this_method});
+            steps.push({"old": this_old.clone(), "new": this_new.clone(), "method": this_method});
             previous_expression = this_new;
         });
     });
@@ -222,8 +222,6 @@ Expression.prototype = {
             steps = steps.concat(Expression.sanitizeSubSteps(arg_steps, this.operator, this.argument));
         }
 
-        this.argument = new_argument;
-
         //Step 3: Do numerical computation if we can.
         var all_numbers = _.every(new_argument, function(arg) {
             return arg.isNumber();
@@ -246,8 +244,8 @@ Expression.prototype = {
         }
 
         //Step 4: Try to pattern match items from rules.js
-        var old_expression = this.clone();
-        var new_expression = this.clone();
+        var old_expression = new Expression(null, "direct", this.operator, new_argument);
+        var new_expression = old_expression.clone();
         var index = 0;
         while (_.isEqual(old_expression, new_expression) && index < RULES[this.operator.value].length) {
             old_expression = new_expression.clone();
@@ -323,7 +321,7 @@ Expression.prototype = {
         }
         if (this.isLeaf()) {
             if (_.isEqual(this.operator, old_leaf)) {
-                return new_leaf;
+                return new_leaf.clone();
             } else {
                 return this.clone();
             }
