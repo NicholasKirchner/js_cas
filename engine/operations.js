@@ -90,6 +90,10 @@ OPERATIONS = {
     "sin": { "arguments": 1
            },
     "cos": { "arguments": 1
+           },
+    "log": { "arguments": 1,
+             "evaluator": function(a) { return Math.log(a); },
+             "latexifier": function(a) { return "\\log\\left(" + a.printLatex() + "\\right)"; }
            }
            
 };

@@ -59,7 +59,7 @@ Expression.infixToRpn = function(infix) {
     });
     while (stack.length > 0) {
         if (_.last(stack) === "(" || _.last(stack) === ")") {
-            alert("Mismatched parentheses");
+            throw "Mismatched parentheses";
             return false;
         }
         output_queue.push(stack.pop());
@@ -199,10 +199,12 @@ Expression.prototype = {
     //        73^(4+2)
     //        73^6
     //      (answer)
-    simplify: function(log_steps) {
+    simplify: function(log_steps, intermediate_steps) {
+        var steps = intermediate_steps || [];
+
         //Step 1: if it's a leaf, we can't do anything.  Base case.
         if (this.isLeaf()) {
-            return {"steps": [], "answer": this};
+            return {"steps": steps, "answer": this};
         }
 
         //Step 2: Simplify all sub-expressions and concatenate intermediate steps
@@ -213,13 +215,14 @@ Expression.prototype = {
             return arg["answer"];
         });
 
-        var steps = [];
         if (log_steps) {
             var arg_steps = _.map(simp_argument, function(arg) {
                 return arg["steps"];
             });
-            steps = Expression.sanitizeSubSteps(arg_steps, this.operator, this.argument);
+            steps = steps.concat(Expression.sanitizeSubSteps(arg_steps, this.operator, this.argument));
         }
+
+        this.argument = new_argument;
 
         //Step 3: Do numerical computation if we can.
         var all_numbers = _.every(new_argument, function(arg) {
@@ -241,7 +244,28 @@ Expression.prototype = {
                 return {"steps": steps, "answer": result};
             }    
         }
-        return {"steps": steps, "answer": this};
+
+        //Step 4: Try to pattern match items from rules.js
+        var old_expression = this.clone();
+        var new_expression = this.clone();
+        var index = 0;
+        while (_.isEqual(old_expression, new_expression) && index < RULES[this.operator.value].length) {
+            old_expression = new_expression.clone();
+            new_expression = RULES[this.operator.value][index].applyTo(new_expression);
+            index = index + 1;
+        }
+
+        if (_.isEqual(old_expression, new_expression)) {
+            //we went through the while loop without simplifying
+            return { "steps": steps, "answer": new_expression };
+        } else {
+            //we had a simplification step.  Log the step and try to simplify more.
+            var rule_used = RULES[this.operator.value][index - 1];
+            if (log_steps) {
+                steps.push({"old": old_expression.clone(), "new": new_expression.clone(), "method": rule_used.description });
+            }
+            return new_expression.simplify(log_steps, steps);
+        }
     },
 
     isNumber: function() {
@@ -257,7 +281,7 @@ Expression.prototype = {
         if (pattern.isLeaf()) {
             var pattern_key = pattern.operator.patternIndex();
             if (!pattern_key) {
-                return assigned;
+                return _.isEqual(pattern, this) ? assigned : false;
             } else {
                 if (assigned[pattern_key]) {
                     return _.isEqual(assigned[pattern_key],this) ? assigned : false;
@@ -313,6 +337,11 @@ Expression.prototype = {
     },
 
     clone: function() {
-        return new Expression(null, "direct", this.operator, this.argument);
+        if (this.isLeaf()) {
+            return new Expression(null, "direct", this.operator, null);
+        } else {
+            new_args = _.map(this.argument, function(arg) { return arg.clone(); });
+            return new Expression(null, "direct", this.operator, new_args);
+        }
     }
 };
