@@ -1,15 +1,15 @@
 Expression = function(input, type, operator, argument) {
     type = type || "infix"
-    if (type == "direct") {
+    if (type === "direct") {
         this.operator = operator;
         this.argument = argument;
         return;
     }
-    if (type == "infix") {
+    if (type === "infix") {
         input = Expression.infixToRpn(input);
         type = "rpn";
     }
-    if (type == "rpn") {
+    if (type === "rpn") {
         input = Expression.rpnToArrayTree(input);
     }
 
@@ -32,33 +32,33 @@ Expression.infixToRpn = function(infix) {
     var token_list = Expression.getTokensFromInfix(infix);
     _.each(token_list, function(token) {
         type = Token.type(token);
-        if (type == "number" || type == "variable" || type == "pattern") {
+        if (type === "number" || type === "variable" || type === "pattern") {
             output_queue.push(token);
-        } else if (type == "function") {
+        } else if (type === "function") {
             stack.push(token);
-        } else if (token == ",") {
-            while (_.last(stack) != "(") {
+        } else if (token === ",") {
+            while (_.last(stack) !== "(") {
                 output_queue.push(stack.pop());
             }
-        } else if (type == "operator") {
+        } else if (type === "operator") {
             while (Operations.shouldPop(token, _.last(stack))) {
                 output_queue.push(stack.pop());
             }
             stack.push(token);
-        } else if (token == "(") {
+        } else if (token === "(") {
             stack.push(token);
-        } else if (token == ")") {
-            while (_.last(stack) != "(") {
+        } else if (token === ")") {
+            while (_.last(stack) !== "(") {
                 output_queue.push(stack.pop());
             }
             stack.pop();
-            if (_.last(stack) && Token.type(_.last(stack)) == "function") {
+            if (_.last(stack) && Token.type(_.last(stack)) === "function") {
                 output_queue.push(stack.pop());
             }
         }
     });
     while (stack.length > 0) {
-        if (_.last(stack) == "(" || _.last(stack) == ")") {
+        if (_.last(stack) === "(" || _.last(stack) === ")") {
             alert("Mismatched parentheses");
             return false;
         }
@@ -74,15 +74,14 @@ Expression.getTokensFromInfix = function(infix) {
 
     while (infix.length > 0) {
         var token = Token.getFirstFromString(infix);
-        infix = infix.replace(token, "");
-        infix = infix.trim();
+        infix = infix.replace(token, "").trim();
         // A special case: unary negation uses the same symbol as subtraction
         // Should be unary negation if the preceeding token is an operator or
         // opening paren.  Deal with it by converting it to multiplication by
         // -1.
-        if (token == "-") {
+        if (token === "-") {
             var prev_token = _.last(token_list);
-            if (!prev_token || prev_token == "(" || Token.type(prev_token) == "operator") {
+            if (!prev_token || prev_token === "(" || Token.type(prev_token) === "operator") {
                 infix = "u(1)*" + infix;
             } else {
                 token_list.push(token);
@@ -145,7 +144,7 @@ Expression.prototype = {
             //This is straightforward: if it's a standard functional form
             //like sin, cos, exp, log, and generally f(x), print the function
             //and put the arg in parentheses.
-            if (raw_op == "u") {
+            if (raw_op === "u") {
                 //special case for unary negation
                 if (Operations.shouldGroupUnaryArg(this.argument[0])){
                     return "-(" + this.argument[0].printInfix() + ")";
@@ -161,8 +160,8 @@ Expression.prototype = {
         } else {
             //This gets grungy.  Gist: determine using precedence, associativity
             // and order rules whether to put parentheses around arguments.
-            var beginning = first_arg.printInfix();
-            var ending = second_arg.printInfix();
+            var beginning = this.argument[0].printInfix();
+            var ending = this.argument[1].printInfix();
 
             //Determine if we need parens around the first argument.
             if (Operations.shouldGroupBeginning(raw_op, this.argument[0])) {
@@ -254,25 +253,24 @@ Expression.prototype = {
     },
 
     patternMatch: function(pattern, assigned) {
-        assigned = assigned || {};
-        if (this.operator != pattern.operator) {
-            return false;
-        }
-        if (this.isLeaf()) {
-            var pattern_key = Token.patternIndex(pattern)
+        assigned = _.clone(assigned) || {};
+        if (pattern.isLeaf()) {
+            var pattern_key = pattern.operator.patternIndex();
             if (!pattern_key) {
                 return assigned;
             } else {
                 if (assigned[pattern_key]) {
-                    return assigned[pattern_key] == this ? assigned : false;
+                    return _.isEqual(assigned[pattern_key],this) ? assigned : false;
                 } else {
                     assigned[pattern_key] = this;
                     return assigned;
                 }
             }
+        } else if (!_.isEqual(this.operator, pattern.operator)) {
+            return false;
         } else {
             var invalid_leaf = _.find(_.range(this.argument.length), function(i) {
-                var pattern_key = Token.patternIndex(pattern.argument[i]);
+                var pattern_key = pattern.argument[i].operator.patternIndex();
                 if (!pattern_key) {
                     assigned = this.argument[i].patternMatch(pattern.argument[i], assigned);
                     if (!assigned && !_.isEqual(assigned, {})) {
@@ -280,15 +278,15 @@ Expression.prototype = {
                     }
                 } else {
                     if (assigned[pattern_key]) {
-                        if (assigned[pattern_key] != this.argument[i]) {
+                        if (!_.isEqual(assigned[pattern_key], this.argument[i])) {
                             return true; //An invalid leaf
                         }
                     } else {
                         assigned[pattern_key] = this.argument[i];
                     }
                 }
-            });
-            if (invalid_leaf || invalid_leaf == 0) {
+            }, this);
+            if (invalid_leaf || invalid_leaf === 0) {
                 return false;
             }
             return assigned;
@@ -296,18 +294,25 @@ Expression.prototype = {
     },
 
     replaceLeaves: function(old_leaf, new_leaf) {
+        if (new_leaf instanceof Token) {
+            new_leaf = new Expression(null, "direct", new_leaf, null);
+        }
         if (this.isLeaf()) {
-            if (this.operator == old_leaf) {
+            if (_.isEqual(this.operator, old_leaf)) {
                 return new_leaf;
             } else {
-                return _.clone(this);
+                return this.clone();
             }
         } else {
-            var result = _.clone(this);
+            var result = this.clone();
             result.argument = _.map(this.argument, function(arg) {
                 return arg.replaceLeaves(old_leaf, new_leaf);
             });
             return result;
         }
+    },
+
+    clone: function() {
+        return new Expression(null, "direct", this.operator, this.argument);
     }
 };

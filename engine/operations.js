@@ -86,7 +86,11 @@ OPERATIONS = {
                var ending = b.printLatex();
                return "\\frac{d}{d" + ending + "}\\left(" + beginning + "\\right)";
            }
-         }
+         },
+    "sin": { "arguments": 1
+           },
+    "cos": { "arguments": 1
+           }
            
 };
 

@@ -8,7 +8,7 @@ Pattern = function(before, after, description, restrictions) {
 Pattern.prototype = {
     applyTo: function(expression) {
         var substitutions = expression.patternMatch(this.before) || {};
-        if (_.size(substitutions) == 0) {
+        if (_.size(substitutions) === 0) {
             return expression;
         }
         
@@ -24,11 +24,11 @@ Pattern.prototype = {
                 args = [];
             }
             var restriction_function = substitutions[pattern][restriction["function"]];
-            if (restriction_function.apply(null, args) != restriction["result"]) {
+            if (restriction_function.apply(substitutions[pattern], args) != restriction["result"]) {
                 //it's an invalid pattern
                 return true;
             }
-            return false;
+            return false; //valid pattern
         });
         if (invalid_pattern) {
             return expression;
@@ -36,7 +36,7 @@ Pattern.prototype = {
 
         //We got this far, meaning we've got a good substitution.
         //Now, construct and return.
-        var result = this.after;
+        var result = this.after.clone();
         _.each(_.pairs(substitutions), function(pair) {
             var key = pair[0];
             var new_value = pair[1];
