@@ -1,7 +1,3 @@
-load("operations.js");
-load("token.js");
-load("lib/underscore.js");
-
 Expression = function(input, type, operator, argument) {
     type = type || "infix"
     if (type == "direct") {

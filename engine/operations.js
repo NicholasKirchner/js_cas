@@ -92,7 +92,7 @@ OPERATIONS = {
 
 Operations = {};
 Operations.shouldPop = function(o1, o2) {
-    if (!o2 || Token.type(o2) != "operator") {
+    if (!o2 || Token.type(o2) !== "operator") {
         return false;
     }
     var precedence1 = OPERATIONS[o1]["precedence"];
@@ -100,7 +100,7 @@ Operations.shouldPop = function(o1, o2) {
     if (precedence1 < precedence2) {
         return true;
     }
-    if (OPERATIONS[o1]["order"] == "left" && precedence1 == precedence2) {
+    if (OPERATIONS[o1]["order"] === "left" && precedence1 === precedence2) {
         return true;
     }
     return false;
@@ -121,11 +121,11 @@ Operations.shouldGroupBeginning = function(parent_op, first_arg) {
         return true;
     }
     //This condition comes up in towered exponentiation: (4^3)^2
-    if (parent_precedence == child_precedence && parent_order == "right" && !parent_is_associative) {
+    if (parent_precedence === child_precedence && parent_order === "right" && !parent_is_associative) {
         return true;
     }
     //special case: creates (sin(x))^2 as opposed to sin(x)^2
-    if (parent_op == "^" && !OPERATIONS[child_op]["inline"]){
+    if (parent_op === "^" && !OPERATIONS[child_op]["inline"]){
         return true;
     }
     return false;
@@ -146,7 +146,7 @@ Operations.shouldGroupEnding = function(parent_op, last_arg) {
         return true;
     }
     //This condition comes up in the expression 4-(3-2)
-    if (parent_precedence == child_precedence && parent_order == "left" && !parent_is_associative) {
+    if (parent_precedence === child_precedence && parent_order === "left" && !parent_is_associative) {
         return true;
     }
     return false;
@@ -154,5 +154,5 @@ Operations.shouldGroupEnding = function(parent_op, last_arg) {
 
 Operations.shouldGroupUnaryArg = function(child_arg) {
     var child_op = child_arg.operator.value;
-    return (child_arg.isLeaf || OPERATIONS[child_op]["precedence"] < 2);
+    return (child_arg.isLeaf() || OPERATIONS[child_op]["precedence"] < 2);
 };
